@@ -284,4 +284,3 @@ class SelfCorrectingInhomogeneous(PointProcess):
             exponent = np.clip(exponent, -700, 709)
             lam[i] = np.exp(exponent)
         return lam
-
