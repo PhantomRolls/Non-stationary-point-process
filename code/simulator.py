@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import quad
+from scipy.optimize import brentq
 
 class PointProcess:
     def __init__(self, T):
@@ -123,10 +125,163 @@ class Hawkes(PointProcess):
         return lam
 
 
+class SelfCorrecting(PointProcess):
+    r"""Processus ponctuel auto-corrigeant Ogata (1988).
 
-    
-    
-    
-    
+    L'intensité conditionnelle est donnée par :
+    $$\lambda^*(t) = \exp(\mu + \beta t - \alpha N_t)$$
+    où $N_t$ est le nombre d'événements strictement avant $t$.
+    """
 
-    
+    _EPS = 1e-12
+
+    def __init__(self, T, params):
+        super().__init__(T)
+        self.mu = params["mu"]
+        self.alpha = params["alpha"]
+        self.beta = params["beta"]
+        if self.beta <= 0:
+            raise ValueError("Le paramètre 'beta' doit être strictement positif pour un processus auto-corrigeant.")
+        self.simulate()
+
+    def simulate(self):
+        t = 0.0
+        events = []
+        while True:
+            k = len(events)
+            e = max(np.random.exponential(1.0), self._EPS)
+            t_next = self._next_event_time(t, k, e)
+            if t_next > self.T:
+                break
+            events.append(t_next)
+            t = t_next
+        self.events = np.array(events)
+        self.lambda_values = self._intensity_on_grid(self.times, self.mu, self.alpha, self.beta, self.events)
+
+    def _next_event_time(self, t, k, e):
+        if self.beta < 1e-8:
+            lam = np.exp(np.clip(self.mu - self.alpha * k, -700, 709))
+            return t + e / lam
+        b_term = np.log(self.beta) + np.log(e) - self.mu + self.alpha * k
+        log_term = np.logaddexp(self.beta * t, b_term)
+        return log_term / self.beta
+
+    @staticmethod
+    def _intensity_on_grid(times, mu, alpha, beta, events):
+        lam = np.empty_like(times, dtype=float)
+        k = 0
+        n = len(events)
+        for i, t in enumerate(times):
+            while k < n and events[k] <= t:
+                k += 1
+            exponent = mu + beta * t - alpha * k
+            lam[i] = np.exp(np.clip(exponent, -700, 709))
+        return lam
+
+
+class SelfCorrectingInhomogeneous(PointProcess):
+    r"""Processus auto-corrigeant non stationnaire.
+
+    L'intensité conditionnelle est :
+    $$\lambda^*(t) = \exp\big(\mu + g(t) + \beta t - \alpha N_t\big)$$,
+    où $g(t)$ est une fonction de dérive déterministe fournie par l'utilisateur.
+
+    Paramètres attendus :
+
+    - ``mu`` : composante constante du log-intensité.
+    - ``alpha`` : impact correctif de chaque événement.
+    - ``beta`` : composante linéaire (accélération) dans le temps.
+    - ``baseline`` : fonction scalaire $g(t)$ (optionnelle, zéro par défaut).
+    - ``initial_window`` : fenêtre de recherche initiale pour l'événement suivant.
+    - ``max_extension`` : extension maximale lors de la recherche de racine.
+    """
+
+    _EPS = 1e-12
+
+    def __init__(self, T, params):
+        super().__init__(T)
+        self.mu = params["mu"]
+        self.alpha = params["alpha"]
+        self.beta = params["beta"]
+        if self.beta <= 0:
+            raise ValueError("Le paramètre 'beta' doit être strictement positif pour un processus auto-corrigeant.")
+        baseline = params.get("baseline")
+        if baseline is None:
+            self._baseline = lambda t: 0.0
+        elif callable(baseline):
+            self._baseline = baseline
+        else:
+            raise TypeError("Le paramètre 'baseline' doit être une fonction scalaire de t.")
+        self.initial_window = max(params.get("initial_window", 1.0), 1e-6)
+        self.max_extension = max(params.get("max_extension", max(5.0, 0.25 * self.T)), 1.0)
+        self.simulate()
+
+    def simulate(self):
+        t = 0.0
+        events = []
+        while True:
+            k = len(events)
+            e = max(np.random.exponential(1.0), self._EPS)
+            t_next = self._next_event_time(t, k, e)
+            if not np.isfinite(t_next) or t_next > self.T:
+                break
+            events.append(t_next)
+            t = t_next
+        self.events = np.array(events)
+        self.lambda_values = self._intensity_on_grid(
+            self.times, self.mu, self.alpha, self.beta, self._baseline, self.events
+        )
+
+    def _next_event_time(self, t, k, target):
+        # Recherche du prochain événement via inversion numérique de la fonction intensité cumulée.
+        upper = t + self.initial_window
+        integral = self._integrated_intensity(t, upper, k)
+        # Étend la fenêtre jusqu'à dépasser la quantité cible.
+        while integral < target:
+            if upper - t > self.max_extension or upper >= self.T + self.max_extension:
+                return np.inf
+            step = max(self.initial_window, 0.5 * (upper - t))
+            upper += step
+            integral = self._integrated_intensity(t, upper, k)
+        if integral <= 0:
+            return np.inf
+
+        def root_func(x):
+            return self._integrated_intensity(t, x, k) - target
+
+        lower = max(t + self._EPS, t)
+        try:
+            return brentq(root_func, lower, upper, xtol=1e-10, rtol=1e-10, maxiter=100)
+        except ValueError:
+            return np.inf
+
+    def _integrated_intensity(self, start, end, k):
+        if end <= start:
+            return 0.0
+
+        alpha_term = -self.alpha * k
+
+        def integrand(s):
+            exponent = self.mu + self.beta * s + self._baseline_value(s) + alpha_term
+            exponent = np.clip(exponent, -700, 709)
+            return np.exp(exponent)
+
+        val, _ = quad(integrand, start, end, epsabs=1e-9, epsrel=1e-7, limit=100)
+        return max(val, 0.0)
+
+    def _baseline_value(self, t):
+        return float(self._baseline(t))
+
+    @staticmethod
+    def _intensity_on_grid(times, mu, alpha, beta, baseline_func, events):
+        lam = np.empty_like(times, dtype=float)
+        k = 0
+        n = len(events)
+        for i, t in enumerate(times):
+            while k < n and events[k] <= t:
+                k += 1
+            exponent = mu + beta * t + float(baseline_func(t)) - alpha * k
+            exponent = np.clip(exponent, -700, 709)
+            lam[i] = np.exp(exponent)
+        return lam
+

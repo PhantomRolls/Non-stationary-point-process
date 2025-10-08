@@ -24,3 +24,4 @@ def fit_hawkes(events, T):
     obj = lambda p: -hawkes_loglik(p, events, T)
     res = minimize(obj, x0=[0.5, 0.8, 1.0], bounds=[(1e-8,None),(0,None),(1e-8,None)])
     return res
+

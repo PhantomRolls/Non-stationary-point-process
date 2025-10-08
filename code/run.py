@@ -1,6 +1,6 @@
-from simulator import Hawkes, PoissonHomogeneous, PoissonInhomogeneous
-from mle import fit_hawkes
-from test import simulation, plot_ccdf
+from .simulator import Hawkes, PoissonHomogeneous, PoissonInhomogeneous
+from .mle import fit_hawkes
+from .test import simulation, plot_ccdf
 import numpy as np
 import pandas as pd
 import time

@@ -2,8 +2,8 @@ import numpy as np
 from scipy.stats import kstest, kstwobign
 import pandas as pd
 from tabulate import tabulate
-from simulator import Hawkes
-from mle import fit_hawkes
+from .simulator import Hawkes
+from .mle import fit_hawkes
 import matplotlib.pyplot as plt
 from scipy.stats import expon
 from tqdm import tqdm
