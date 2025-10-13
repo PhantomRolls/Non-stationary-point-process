@@ -284,3 +284,73 @@ class SelfCorrectingInhomogeneous(PointProcess):
             exponent = np.clip(exponent, -700, 709)
             lam[i] = np.exp(exponent)
         return lam
+
+class ShotNoise(PointProcess):
+    """Shot noise process.
+    
+    The conditional intensity is given by:
+    λ*(t) = μ + Σ_{t_i < t} α * exp(-β(t - t_i))
+    
+    where μ is the baseline intensity, α is the jump size, and β is the decay rate.
+    """
+    
+    def __init__(self, T, params):
+        super().__init__(T)
+        self.mu = params["mu"]
+        self.alpha = params["alpha"]
+        self.beta = params["beta"]
+        if self.mu <= 0:
+            raise ValueError("Parameter 'mu' must be strictly positive.")
+        if self.alpha < 0:
+            raise ValueError("Parameter 'alpha' must be non-negative.")
+        if self.beta <= 0:
+            raise ValueError("Parameter 'beta' must be strictly positive.")
+        self.simulate()
+    
+    def simulate(self):
+        t = 0
+        events = []
+        lambda_t = self.mu
+        M = self.mu + self.alpha
+        S = 0.0
+        
+        while True:
+            u = np.random.uniform(0, 1)
+            w = -np.log(u) / M
+            t += w
+            if t > self.T:
+                break
+            
+            D = np.random.uniform(0, 1)
+            S = S * np.exp(-self.beta * w)
+            lambda_t = self.mu + self.alpha * S
+            
+            if D <= lambda_t / M:
+                events.append(t)
+                S = S + 1
+                M = self.mu + self.alpha * S
+            
+        self.events = np.array(events)
+        self.lambda_values = self._intensity_on_grid(self.times, self.mu, self.alpha, self.beta, self.events)
+    
+    @staticmethod
+    def _intensity_on_grid(times, mu, alpha, beta, events):
+        lam = np.empty_like(times, dtype=float)
+        S = 0.0
+        t_last = 0.0
+        k = 0
+        n = len(events)
+        
+        for i, t in enumerate(times):
+            while k < n and events[k] <= t:
+                dt = events[k] - t_last
+                S = S * np.exp(-beta * dt)
+                S += 1.0
+                t_last = events[k]
+                k += 1
+            
+            dt = t - t_last
+            S_t = S * np.exp(-beta * dt)
+            lam[i] = mu + alpha * S_t
+        
+        return lam
