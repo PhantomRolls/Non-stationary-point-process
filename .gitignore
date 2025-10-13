@@ -1,0 +1,64 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches & test output
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+nosetests.xml
+pytestdebug.log
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Wheels
+*.whl
+
+# IPython/Jupyter
+.ipynb_checkpoints
+
+# mypy
+.mypy_cache/
+.dmypy.json
+
+# Pyre
+.pyre/
+
+# PyCharm / JetBrains
+.idea/
+
+# VS Code
+.vscode/
+
+# Rope project
+.ropeproject
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+tmp/
+temp/
+
+# Editor backups
+*~
+*.swp
