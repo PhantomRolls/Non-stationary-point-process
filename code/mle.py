@@ -3,6 +3,7 @@ from scipy.optimize import minimize
 
 def hawkes_loglik(params, events, T):
     mu, alpha, beta = params
+    events_arr = np.array(events)
     if mu <= 0 or alpha < 0 or beta <= 0:
         return -np.inf
     n = len(events)
@@ -17,7 +18,7 @@ def hawkes_loglik(params, events, T):
     if np.any(lam <= 0):
         return -np.inf
     term1 = np.sum(np.log(lam))
-    term2 = mu*T + (alpha/beta) * np.sum(1 - np.exp(-beta*(T-events)))
+    term2 = mu*T + (alpha/beta) * np.sum(1 - np.exp(-beta*(T-events_arr)))
     return term1 - term2
 
 def fit_hawkes(events, T):

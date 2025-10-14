@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import kstest, kstwobign
 import pandas as pd
 from tabulate import tabulate
-from simulator import Hawkes
+from simulator import HawkesExp, HawkesPL
 from mle import fit_hawkes
 import matplotlib.pyplot as plt
 from scipy.stats import expon
@@ -21,7 +21,7 @@ def random_time_change(events, params):
         ti_1 = ti
     return np.array(transformed_events)
 
-def ks_test(transformed_events, alpha=0.05):     
+def ks_test(transformed_events, T, alpha=0.05):    
     stat, pval = kstest(transformed_events, 'expon')
     rejette = (pval < alpha)
     return rejette, stat
@@ -30,12 +30,12 @@ def simulation(n_simulations, T, true_params, alpha=0.05, plot_qq=False):
     n_rejections = 0
     stats = []
     for _ in tqdm(range(n_simulations), desc="Traitement"):
-        hawkes = Hawkes(T, true_params)
+        hawkes = HawkesPL(T, true_params)
         events = hawkes.events
         res = fit_hawkes(events, T)
         params = {"mu": res.x[0], "alpha": res.x[1], "beta": res.x[2]}
-        transformed_events = random_time_change(events, true_params)
-        rejet, stat = ks_test(transformed_events, alpha)
+        transformed_events = random_time_change(events, params)
+        rejet, stat = ks_test(transformed_events, T, alpha)
         stats.append(stat * np.sqrt(len(events)))
         if rejet:
             n_rejections += 1
@@ -68,7 +68,7 @@ def plot_ccdf(true_params, T):
     Trace la CCDF empirique des résidus transformés (z_i)
     et la CCDF théorique d'une loi Exp(1).
     """
-    hawkes = Hawkes(T, true_params)
+    hawkes = HawkesExp(T, true_params)
     res = fit_hawkes(hawkes.events, T)
     params = {"mu": res.x[0], "alpha": res.x[1], "beta": res.x[2]}
     z = random_time_change(hawkes.events, params)
