@@ -1,60 +1,58 @@
 import numpy as np
-import time
-import Hawkes as hk
-from monte_carlo_seq import monte_carlo_seq
-from import_data import simulate_data
 from simulator import HawkesExp, HawkesPL
+from monte_carlo_seq import monte_carlo_seq
 
-# -----------------------------
-# Simulation parameters
-# -----------------------------
-true_params = {'mu': 0.5, 'alpha': 1, 'beta': 2.0}
-itv = [0, 5000]                 # Observation interval [0, T]
-M = 500                         # Number of Monte Carlo replications
-alpha_level = 0.2               # Significance level (0.01, 0.05 or 0.2)
-underlying_process = HawkesExp  # Choose the true underlying process that generates the data (between HawkesExp and HawkesPL)
-method = "naive"                # Choose the test: "naive" or "khmaladze"
-H0 = "pl"                       # Null hypothesis: "exp" or "pl"
 
-# For a potential loop
-alpha_levels = [0.01, 0.05]
+# ---------------------------------------------------
+# 1. Define generator of events
+# ---------------------------------------------------
+def make_generator(process_class, params):
+    generator_name = process_class.__name__
+    def generator():
+        H = process_class(params)
+        return H.events
+    return generator, generator_name
+
+
+# ---------------------------------------------------
+# 2. Monte Carlo settings
+# ---------------------------------------------------
+M = 500
+T = 5000
+
+alpha_levels = [0.01, 0.05, 0.2]
 underlying_processes = [HawkesExp, HawkesPL]
-methods = ["naive", "khmaladze"] 
-
+methods = ["naive", "khmaladze"]
+H0 = "pl"
+csv_path = "results/results_pl.csv"
 
 for alpha_level in alpha_levels:
-    for underlying_process in underlying_processes:
+    for process_class in underlying_processes:
+        for method in methods:
 
-        print(f"=== Alpha level: {alpha_level}, Underlying process: {underlying_process.__name__}, H0: {H0} ===")
-        seed0 = 1234
-        file_data = "data/FR0000120271_20220103_open.csv"
-        sim_data = simulate_data(file_data)
+            print(f"=== α={alpha_level}, underlying={process_class.__name__}, H0={H0}, method={method} ===")
 
-        # Parameters for the Khmaladze transformation
-        tau = 1.0                 # Use the entire interval [0, 1]
-        n_for_test = None         # If None → code sets n = ceil(sqrt(T)/4)
-        grid_size = None          # If None → grid = max(2000, 20 * n_for_test)
+            # True parameters of the generating process
+            true_params = {
+                "mu": 0.5,
+                "alpha": 1.0,
+                "beta": 2.0,
+                "T": T
+            }
 
-        # -----------------------------
-        # Monte Carlo using naive transformation
-        # -----------------------------
-        print(f"=== {method} transformation ===")
+            # Build event generator
+            events_generator, generator_name = make_generator(process_class, true_params)
 
-        result_naive = monte_carlo_seq(
-            true_params=true_params,
-            itv=itv,
-            M=M,
-            
-            underlying_process=underlying_process,
-            alpha_level=alpha_level,
-            H0 = H0,
-            method=method, 
-            
-            sim_data=sim_data,
-            seed0=seed0,
-            data="simulate",
-            n_sub=None,           # Use all events
-            sub_method="first_n", # Sub-sampling rule (used only for naive method)
-        )
+            # Run Monte Carlo
+            result = monte_carlo_seq(
+                M=M,
+                events_generator=events_generator,
+                T=T,
+                H0=H0,
+                method=method,
+                alpha_level=alpha_level,
+                generator_name=generator_name,
+                csv_path=csv_path
+            )
 
-        print("Final results (naive):", result_naive)
+            print("Result:", result)

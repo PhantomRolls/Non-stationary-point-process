@@ -1,0 +1,24 @@
+PoissonHomogeneous:
+  T: 5000
+  lambda: 1
+
+pPissonInhomogeneous:
+  T: 5000
+
+HawkesExp:
+  T: 5000
+  mu: 0.5
+  alpha: 1.0
+  beta: 2.0
+
+HawkesMultiExp:
+  T: 5000
+  mu: 0.5
+  alphas: [1.0, 0.2, 0.02]
+  betas:  [5.0, 1.0, 0.2]
+
+HawkesPL:
+  T: 5000
+  mu: 0.5
+  alpha: 1.0
+  beta: 1.2
