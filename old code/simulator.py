@@ -4,16 +4,7 @@ from collections import deque
 
 class PointProcess:
     def plot(self):
-        if self.__class__.__name__ == "PoissonHomogeneous":
-            self.lambda_values = self.lambda_
-        elif self.__class__.__name__ == "PoissonInhomogeneous":
-            self.lambda_values = PoissonInhomogeneous.lambda_t(self.times)
-        elif self.__class__.__name__ == "HawkesExp":
-            self.lambda_values = HawkesExp._intensity_on_grid(self.times, self.mu, self.alpha, self.beta, self.events)
-        elif self.__class__.__name__ == "HawkesPL":
-            self.lambda_values = HawkesPL._intensity_on_grid(self.times, self.mu, self.alpha, self.beta, self.events)
-        elif self.__class__.__name__ == "HawkesMultiExp":
-            self.lambda_values = HawkesMultiExp._intensity_on_grid(self.times, self.mu, self.alphas, self.betas, self.events)
+        self.lambda_values = self._intensity_on_grid(self.times, self.params, self.events)
         cumul = np.arange(1, len(self.events) + 1)
         fig, ax1 = plt.subplots(figsize=(9, 4))
         if len(self.events):
@@ -38,6 +29,7 @@ class PointProcess:
 class PoissonHomogeneous(PointProcess):
     def __init__(self, params):
         self.events = []
+        self.params = params
         self.T = params["T"]
         self.lambda_ = params["lambda"]
         self.times = np.linspace(0, self.T, int(100*self.T))
@@ -54,10 +46,16 @@ class PoissonHomogeneous(PointProcess):
                 break
             events.append(t)
         self.events = np.array(events)
-
+    
+    @staticmethod
+    def _intensity_on_grid(times, params, events):
+        return params["lambda"] * np.ones_like(times, dtype=float)
+        
 class PoissonInhomogeneous(PointProcess):
-    def __init__(self):
+    def __init__(self, params):
         self.events = []
+        self.params = params
+        self.T = params["T"]
         self.times = np.linspace(0, self.T, int(100*self.T))
         self.simulate()
           
@@ -75,11 +73,14 @@ class PoissonInhomogeneous(PointProcess):
             if u <= self.lambda_t(events_h[i]) / lambda_:
                 events.append(events_h[i])
         self.events = np.array(events)
+
+    def _intensity_on_grid(self, times, params, events):
+        return self.lambda_t(times)
         
     
 class HawkesExp(PointProcess):
     def __init__(self, params):
-        print(self.__class__.__name__)
+        self.params = params
         self.events = []
         self.T = params["T"]
         self.mu = params["mu"]
@@ -127,7 +128,10 @@ class HawkesExp(PointProcess):
         self.events.sort()
 
     @staticmethod
-    def _intensity_on_grid(times, mu, alpha, beta, events):
+    def _intensity_on_grid(times, params, events):
+        mu = params["mu"]
+        alpha = params["alpha"]
+        beta = params["beta"]
         lam = np.empty_like(times, dtype=float)
         G = 0.0
         t_last = 0.0
@@ -147,6 +151,7 @@ class HawkesExp(PointProcess):
 class HawkesPL(PointProcess):
     def __init__(self, params):
         self.events = []
+        self.params = params
         self.T = params["T"]
         self.mu = params["mu"]
         self.alpha = params["alpha"]
@@ -171,7 +176,10 @@ class HawkesPL(PointProcess):
         self.events.sort()
     
     @staticmethod
-    def _intensity_on_grid(times, mu, alpha, beta, events):
+    def _intensity_on_grid(times, params, events):
+        mu = params["mu"]
+        alpha = params["alpha"]
+        beta = params["beta"]
         times = np.asarray(times, float)
         events = np.asarray(events, float)
         lam = np.full_like(times, mu, dtype=float)
@@ -180,11 +188,11 @@ class HawkesPL(PointProcess):
             if past.size:
                 lam[k] += alpha * np.sum((1.0 + (t - past))**(-(beta+1)))
         return lam
-    
 
 class HawkesMultiExp(PointProcess):
     def __init__(self, params):
         self.events = []
+        self.params = params
         self.T = params["T"]
         self.mu = params["mu"]
         self.alphas = np.array(params["alphas"])
@@ -219,7 +227,10 @@ class HawkesMultiExp(PointProcess):
         self.events.sort()
 
     @staticmethod
-    def _intensity_on_grid(times, mu, alphas, betas, events):
+    def _intensity_on_grid(times, params, events):
+        mu = params["mu"]
+        alphas = np.array(params["alphas"])
+        betas = np.array(params["betas"])
         times = np.asarray(times, float)
         events = np.asarray(events, float)
         lam = np.full_like(times, mu, dtype=float)

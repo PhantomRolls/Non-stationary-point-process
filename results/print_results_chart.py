@@ -1,7 +1,7 @@
 import pandas as pd
 from tabulate import tabulate
 
-def print_hawkes_table(csv_file="results/results_pl.csv"):
+def print_hawkes_table(csv_file="results/results_exp.csv"):
     df = pd.read_csv(csv_file)
 
     # Ordre des alpha comme dans ton papier
@@ -9,19 +9,22 @@ def print_hawkes_table(csv_file="results/results_pl.csv"):
     stats = ["KS", "CvM", "AD"]
     methods = [("khmaladze", "Transf."), ("naive", "Naive")]
 
-    processes = sorted(df["underlying_process"].unique())
-    processes = processes[::-1]  # Pour HawkesPL en premier
+    processes = sorted(df["generator"].unique())
+    processes.insert(2, processes.pop(processes.index('HawkesMultiExp')))
+
+    if "pl" in csv_file:
+        processes.insert(0, processes.pop(processes.index('HawkesPL'))) # For HawkesPL in first
     table_rows = []
 
     for proc in processes:
-        row = [proc]  # première colonne = Test
+        row = [proc]
 
         for method_name, _ in methods:
             for stat in stats:
                 vals = []
                 for a in alphas:
                     sub = df[
-                        (df["underlying_process"] == proc)
+                        (df["generator"] == proc)
                         & (df["method"] == method_name)
                         & (df["alpha_level"] == a)
                     ]

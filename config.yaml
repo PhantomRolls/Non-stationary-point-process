@@ -2,7 +2,7 @@ PoissonHomogeneous:
   T: 5000
   lambda: 1
 
-pPissonInhomogeneous:
+PoissonInhomogeneous:
   T: 5000
 
 HawkesExp:

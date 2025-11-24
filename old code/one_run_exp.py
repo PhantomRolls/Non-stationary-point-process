@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import kstest, anderson, cramervonmises
-
+from scipy.stats import norm
 from clever_trasformation import (
     build_eta_on_grid,
     transform_T_eta_univariate,
@@ -83,20 +83,40 @@ def one_run(events, T, H0="exp", method="khmaladze",
         x = khmaladze_increments(events, mu_hat, alpha_hat, beta_hat,
                                  T, n_for_test, tau, grid_size, H0)
 
-    else:
-        raise ValueError("Invalid method.")
-
     # 4. Normality tests
     ks_stat, ks_p = kstest(x, 'norm')
     ks_reject = (ks_p < alpha_level)
 
-    ad_res = anderson(x, 'norm')
-    levels = np.array(ad_res.significance_level) / 100
-    critvals = np.array(ad_res.critical_values)
-    idx = np.argmin(abs(levels - alpha_level))
-    ad_reject = (ad_res.statistic > critvals[idx])
+    # ad_res = anderson(x, 'norm')
+    # levels = np.array(ad_res.significance_level) / 100
+    # critvals = np.array(ad_res.critical_values)
+    # idx = np.argmin(abs(levels - alpha_level))
+    # ad_reject = (ad_res.statistic > critvals[idx])
 
     cvm_res = cramervonmises(x, 'norm')
     cvm_reject = (cvm_res.pvalue < alpha_level)
+    
+    def AD_normal_known(x):
+        """
+        Anderson–Darling test for normality with KNOWN mean=0 and variance=1.
+        Returns:
+        A2 : the AD statistic
+        """
+        x = np.sort(x)
+        n = len(x)
+        Fi = norm.cdf(x)
+        # Avoid log(0)
+        Fi = np.clip(Fi, 1e-12, 1 - 1e-12)
+        i = np.arange(1, n+1)
+        A2 = -n - np.mean((2*i - 1) * (np.log(Fi) + np.log(1 - Fi[::-1])))
+        return A2
+
+    def AD_test_normal_known(x, alpha):
+        A2 = AD_normal_known(x)
+        crit = {0.01: 3.75, 0.05: 2.49, 0.10: 2.14, 0.20: 1.40}[alpha]
+        reject = A2 > crit
+        return reject, A2, crit
+
+    ad_reject, A2, crit = AD_test_normal_known(x, alpha_level)
 
     return ks_reject, ad_reject, cvm_reject

@@ -16,13 +16,13 @@ config = load_config()
 start = time.time()             
 
 
-process = HawkesMultiExp
+process = PoissonInhomogeneous
 params = config[process.__name__]
-params["T"] = 500
+params["T"] = 50
 hawkes = process(params)
 
 events = hawkes.events
-
+hawkes.plot()
 
 end = time.time() 
 print("Execution time:", end - start, "seconds")
