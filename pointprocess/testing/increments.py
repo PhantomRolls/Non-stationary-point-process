@@ -1,7 +1,7 @@
 from pointprocess.testing.transformations import build_eta_on_grid, transform_T_eta_univariate, increments_from_Zhat
 import numpy as np
 
-def naive_increments(events, mu_hat, alpha_hat, beta_hat, T, n, tau, grid_size, H0):
+def naive_increments(events, estimated_params, T, n, tau, grid_size, H0):
 
     # Grid u in [0, tau]
     grid_u_full = np.linspace(0.0, 1.0, grid_size)
@@ -10,7 +10,7 @@ def naive_increments(events, mu_hat, alpha_hat, beta_hat, T, n, tau, grid_size, 
 
     # Empirical process η̂(u)
     eta_full, _, _ = build_eta_on_grid(
-        events, mu_hat, alpha_hat, beta_hat, T, grid_u_full, H0
+        events, estimated_params, T, grid_u_full, H0
     )
     eta_tau = eta_full[mask]
 
@@ -23,7 +23,7 @@ def naive_increments(events, mu_hat, alpha_hat, beta_hat, T, n, tau, grid_size, 
     return Ztilde
 
 
-def khmaladze_increments(events, mu_hat, alpha_hat, beta_hat, T, n, tau, grid_size, H0):
+def khmaladze_increments(events, estimated_params, T, n, tau, grid_size, H0):
 
     # Grid u
     grid_u_full = np.linspace(0.0, 1.0, grid_size)
@@ -32,7 +32,7 @@ def khmaladze_increments(events, mu_hat, alpha_hat, beta_hat, T, n, tau, grid_si
 
     # Empirical process η̂(u)
     eta_full, _, _ = build_eta_on_grid(
-        events, mu_hat, alpha_hat, beta_hat, T, grid_u_full, H0
+        events, estimated_params, T, grid_u_full, H0
     )
     eta_tau = eta_full[mask]
 

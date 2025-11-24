@@ -9,7 +9,7 @@ def one_run(events, T, H0="exp", method="khmaladze",
     events = np.asarray(events, float)
 
     # 1. MLE
-    mu_hat, alpha_hat, beta_hat = fit_hawkes(events, T, H0=H0).x
+    estimated_params = fit_hawkes(events, T, H0=H0).params_dict
 
     # 2. Resolution
     if n_for_test is None:
@@ -19,10 +19,10 @@ def one_run(events, T, H0="exp", method="khmaladze",
 
     # 3. Increments
     if method == "naive":
-        x = naive_increments(events, mu_hat, alpha_hat, beta_hat,
+        x = naive_increments(events, estimated_params,
                              T, n_for_test, tau, grid_size, H0)
     elif method == "khmaladze":
-        x = khmaladze_increments(events, mu_hat, alpha_hat, beta_hat,
+        x = khmaladze_increments(events, estimated_params,
                                  T, n_for_test, tau, grid_size, H0)
     else:
         raise ValueError(f"Unknown method '{method}'")

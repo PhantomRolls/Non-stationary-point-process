@@ -6,17 +6,15 @@ from pointprocess.simulation.hawkes_multiexp import HawkesMultiExp
 
 
 M = 500
-alpha_levels = [0.01, 0.05, 0.2]
-process_generators = [HawkesPL]
+alpha_levels = [0.01]
+process_generators = [HawkesMultiExp]
 methods = ["khmaladze"]
-H0 = "exp"
-csv_path = "results/results.csv"
+H0 = "pl"
+csv_path = "results/results_pl.csv"
 
 for alpha_level in alpha_levels:
     for process_generator in process_generators:
         for method in methods:
-
-            # Run Monte Carlo
             result = monte_carlo_simulation(
                 M=M,
                 process_generator=process_generator,

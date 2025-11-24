@@ -4,7 +4,7 @@ from pointprocess.estimation.likelihoods.pl import hawkes_pl_loglik
 from pointprocess.estimation.likelihoods.multiexp import hawkes_multiexp_loglik
 import numpy as np
 
-def fit_hawkes(events, T, H0, x0=None, L=None, J=None):
+def fit_hawkes(events, T, H0, x0=None):
     events = np.asarray(events, float)
     n = events.size
     
@@ -24,8 +24,7 @@ def fit_hawkes(events, T, H0, x0=None, L=None, J=None):
 
     # ---- POWER-LAW ----
     elif H0 == "pl":
-        if L is None:
-            L = T / 10
+        L = T / 10
         
         if x0 is None:
             x0 = np.array([0.5, 0.5, 1.5])
@@ -33,12 +32,11 @@ def fit_hawkes(events, T, H0, x0=None, L=None, J=None):
         bounds = [(1e-8,None), (0,None), (1e-8,None)]
         
         def obj(p):
-            return -hawkes_pl_loglik(p[0], p[1], p[2], events, T, L, dt, tail)
+            return -hawkes_pl_loglik(p[0], p[1], p[2], events, T, L, tail)
 
     # ---- MULTI-EXP ----
     elif H0 == "multiexp":
-        if J is None:
-            raise ValueError("Must provide J for multiexp.")
+        J=3
         
         if x0 is None:
             mu0 = 0.5
@@ -67,5 +65,39 @@ def fit_hawkes(events, T, H0, x0=None, L=None, J=None):
         method="L-BFGS-B",
         options={"maxiter": 200, "ftol": 1e-6}
     )
+    
+    p = res.x
+
+    if H0 == "exp":
+        params = {
+            "mu": p[0],
+            "alpha": p[1],
+            "beta": p[2]
+        }
+
+    elif H0 == "pl":
+        params = {
+            "mu": p[0],
+            "alpha": p[1],
+            "beta": p[2],
+            "L": L
+        }
+
+    elif H0 == "multiexp":
+        mu = p[0]
+        J = (len(p) - 1) // 2
+        alphas = p[1:1+J]
+        betas  = p[1+J:1+2*J]
+
+        params = {
+            "mu": mu,
+            "alphas": alphas,
+            "betas": betas,
+            "J": J
+        }
+
+    # attach dict to result object for convenience
+    res.params_dict = params
 
     return res
+

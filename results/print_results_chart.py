@@ -1,7 +1,7 @@
 import pandas as pd
 from tabulate import tabulate
 
-def print_hawkes_table(csv_file="results/results_exp.csv"):
+def print_hawkes_table(csv_file="results/results_multiexp.csv"):
     df = pd.read_csv(csv_file)
 
     # Ordre des alpha comme dans ton papier
@@ -14,6 +14,8 @@ def print_hawkes_table(csv_file="results/results_exp.csv"):
 
     if "pl" in csv_file:
         processes.insert(0, processes.pop(processes.index('HawkesPL'))) # For HawkesPL in first
+    if "multiexp" in csv_file:
+        processes.insert(0, processes.pop(processes.index('HawkesMultiExp'))) # For HawkesMultiExp in first
     table_rows = []
 
     for proc in processes:

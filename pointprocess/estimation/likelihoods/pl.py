@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit
 
 @njit(fastmath=True)
-def hawkes_pl_loglik(mu, alpha, beta, events, T, L, dt, tail):
+def hawkes_pl_loglik(mu, alpha, beta, events, T, L, tail):
     n = events.size
     
     if mu <= 0 or alpha < 0 or beta <= 0:
@@ -20,7 +20,6 @@ def hawkes_pl_loglik(mu, alpha, beta, events, T, L, dt, tail):
         while j0 < k and t_k - events[j0] > L:
             j0 += 1
         
-        # Sum_{i=j0..k-1} (1 + t_k - t_i)^(-(beta+1))
         kernel_sum = 0.0
         for i in range(j0, k):
             dt_ik = t_k - events[i]
@@ -32,10 +31,7 @@ def hawkes_pl_loglik(mu, alpha, beta, events, T, L, dt, tail):
         
         lam_log_sum += np.log(lam)
     
-    # Integral term
-    integral = (
-        mu * T
-        + (alpha / beta) * np.sum(1.0 - (1.0 + tail) ** (-beta))
-    )
+    # Integral part
+    integral = mu * T + (alpha / beta) * np.sum(1.0 - (1.0 + tail) ** (-beta))
     
     return lam_log_sum - integral

@@ -1,12 +1,14 @@
 import numpy as np
-from pointprocess.estimation.compensators import compensator_exp_on_grid, compensator_pl_on_grid
+from pointprocess.estimation.compensators.exp import compensator_exp
+from pointprocess.estimation.compensators.pl import compensator_pl
+from pointprocess.estimation.compensators.multiexp import compensator_multiexp
 
 
 
 # -------------------------------------------------------
 # 2) Build eta^{(T)}(u) on a grid
 # -------------------------------------------------------
-def build_eta_on_grid(events, mu_hat, alpha_hat, beta_hat, T, grid_u, H0):
+def build_eta_on_grid(events, estimated_params, T, grid_u, H0):
     """
     Build eta^{(T)}(u) = 1/sqrt(T) * ( N(uT) - Lambda_hat(uT) ), for u in grid_u.
 
@@ -34,9 +36,20 @@ def build_eta_on_grid(events, mu_hat, alpha_hat, beta_hat, T, grid_u, H0):
     grid_times = grid_u * T
 
     if H0 == "exp":
-        Lambda_grid = compensator_exp_on_grid(mu_hat, alpha_hat, beta_hat, events, grid_times)
+        mu = estimated_params["mu"]
+        alpha = estimated_params["alpha"]
+        beta = estimated_params["beta"]
+        Lambda_grid = compensator_exp(mu, alpha, beta, events, grid_times)
     elif H0 == "pl":
-        Lambda_grid = compensator_pl_on_grid(mu_hat, alpha_hat, beta_hat, events, grid_times)
+        mu = estimated_params["mu"]
+        alpha = estimated_params["alpha"]
+        beta = estimated_params["beta"]
+        Lambda_grid = compensator_pl(mu, alpha, beta, events, grid_times)
+    elif H0 == "multiexp":
+        mu = estimated_params["mu"]
+        alphas = estimated_params["alphas"]
+        betas = estimated_params["betas"]
+        Lambda_grid = compensator_multiexp(mu, alphas, betas, events, grid_times)
 
     # N(uT): counts of events ≤ each grid time (events are sorted)
     counts = np.searchsorted(events, grid_times, side="right")
