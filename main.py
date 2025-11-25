@@ -3,18 +3,19 @@ from pointprocess.montecarlo.monte_carlo import monte_carlo_simulation
 from pointprocess.simulation.hawkes_exp import HawkesExp
 from pointprocess.simulation.hawkes_pl import HawkesPL
 from pointprocess.simulation.hawkes_multiexp import HawkesMultiExp
-
+import ctypes
+ctypes.windll.kernel32.SetThreadExecutionState(0x8000000 | 0x00000001 | 0x00000002)
 
 M = 500
-alpha_levels = [0.01]
-process_generators = [HawkesMultiExp]
-methods = ["khmaladze"]
+alpha_levels = [0.05, 0.2]
+process_generators = [HawkesPL]
+methods = ["naive", "khmaladze"]
 H0 = "pl"
-csv_path = "results/results_pl.csv"
+csv_path = "results/results.csv"
 
-for alpha_level in alpha_levels:
-    for process_generator in process_generators:
-        for method in methods:
+for process_generator in process_generators:
+    for method in methods:
+        for alpha_level in alpha_levels:        
             result = monte_carlo_simulation(
                 M=M,
                 process_generator=process_generator,
