@@ -1,7 +1,8 @@
+# pointprocess/testing/one_run.py
 import numpy as np
 from pointprocess.estimation.mle import fit_hawkes
-from pointprocess.testing.increments import naive_increments, khmaladze_increments
-from pointprocess.testing.gof import ks_test, cvm_test, ad_test_known_normal
+from pointprocess.testing.increments import build_increments
+from pointprocess.testing.gof_tests import ks_test, cvm_test, ad_test_known_normal
 
 def one_run(events, T, H0="exp", method="khmaladze",
             alpha_level=0.05, tau=1.0, n_for_test=None, grid_size=None):
@@ -18,14 +19,8 @@ def one_run(events, T, H0="exp", method="khmaladze",
         grid_size = max(2000, 20 * n_for_test)
 
     # 3. Increments
-    if method == "naive":
-        x = naive_increments(events, estimated_params,
-                             T, n_for_test, tau, grid_size, H0)
-    elif method == "khmaladze":
-        x = khmaladze_increments(events, estimated_params,
-                                 T, n_for_test, tau, grid_size, H0)
-    else:
-        raise ValueError(f"Unknown method '{method}'")
+    x = build_increments(events, estimated_params,
+                             T, n_for_test, tau, grid_size, H0, method)
 
     # 4. Tests
     ks_reject  = ks_test(x, alpha_level)

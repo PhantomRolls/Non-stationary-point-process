@@ -15,10 +15,6 @@ class HawkesMultiExp(PointProcess):
         self.simulate_cluster() 
 
     def simulate_cluster(self):
-        """
-        Représentation en clusters : chaque événement génère des enfants
-        selon un processus Poisson de paramètre alpha_j / beta_j pour chaque kernel j.
-        """
         J = len(self.alphas)
         branching_ratios = self.alphas / self.betas   # α_j / β_j pour chaque j
         poisson_h = PoissonHomogeneous({"T": self.T, "lambda": self.mu})

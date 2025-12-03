@@ -1,0 +1,6 @@
+generator,method,alpha_level,M,KS,CvM,AD,time_seconds
+HawkesExp,naive,0.2,50,1,0,1,3.25763490004465
+HawkesExp,khmaladze,0.2,50,12,13,14,2.1836173001211137
+HawkesExp,naive,0.2,50,1,0,0,2.8215782998595387
+HawkesExp,naive,0.2,50,1,0,0,2.8186836999375373
+HawkesExp,khmaladze,0.2,50,8,9,7,2.1520058000460267
