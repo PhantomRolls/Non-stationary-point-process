@@ -7,7 +7,7 @@ def print_hawkes_table(csv_file="results/results_multiexp.csv"):
     # Ordre des alpha comme dans ton papier
     alphas = [0.01, 0.05, 0.20]
     stats = ["KS", "CvM", "AD"]
-    methods = [("khmaladze", "Transf."), ("naive", "Naive")]
+    methods = [("khmaladze", "Transf."), ("naive", "Naive"), ("naive_rtc", "Naive RTC")]
 
     processes = sorted(df["generator"].unique())
     processes.insert(2, processes.pop(processes.index('HawkesMultiExp')))
@@ -44,6 +44,7 @@ def print_hawkes_table(csv_file="results/results_multiexp.csv"):
         "Test",
         "KS (Transf.)", "CvM (Transf.)", "AD (Transf.)",
         "KS (Naive)",  "CvM (Naive)",  "AD (Naive)",
+        "KS (Naive RTC)",  "CvM (Naive RTC)",  "AD (Naive RTC)",
     ]
 
     print("\n=== Résumé des tests (R_0.01; R_0.05; R_0.20) ===\n")

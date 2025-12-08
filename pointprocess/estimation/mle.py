@@ -54,6 +54,23 @@ def fit_hawkes(events, T, H0, x0=None):
             alphas = p[alpha_idx]
             betas  = p[beta_idx]
             return -hawkes_multiexp_loglik(mu, alphas, betas, events, T, dt, tail)
+    
+    elif H0 == "multiexp_fixed_betas":
+        J=3
+        if x0 is None:
+            mu0 = 0.5
+            alpha0 = np.full(J, 0.5/J)
+            x0 = np.concatenate(([mu0], alpha0))
+        
+        bounds = [(1e-8,None)] + [(0,None)]*J
+        
+        alpha_idx = slice(1, 1+J)
+        betas_fixed = np.array([1e5, 1e3, 0.1], dtype=np.float64)
+        
+        def obj(p):
+            mu = p[0]
+            alphas = p[alpha_idx]
+            return -hawkes_multiexp_loglik(mu, alphas, betas_fixed, events, T, dt, tail)
 
     else:
         raise ValueError("Unknown H0")
@@ -72,7 +89,8 @@ def fit_hawkes(events, T, H0, x0=None):
         params = {
             "mu": p[0],
             "alpha": p[1],
-            "beta": p[2]
+            "beta": p[2],
+            "T": T
         }
 
     elif H0 == "pl":
@@ -80,7 +98,7 @@ def fit_hawkes(events, T, H0, x0=None):
             "mu": p[0],
             "alpha": p[1],
             "beta": p[2],
-            "L": L
+            "T": T
         }
 
     elif H0 == "multiexp":
@@ -88,12 +106,23 @@ def fit_hawkes(events, T, H0, x0=None):
         J = (len(p) - 1) // 2
         alphas = p[1:1+J]
         betas  = p[1+J:1+2*J]
-
         params = {
             "mu": mu,
             "alphas": alphas,
             "betas": betas,
-            "J": J
+            "T": T
+        }
+        
+    elif H0 == "multiexp_fixed_betas":
+        mu = p[0]
+        J = len(p) - 1
+        alphas = p[1:1+J]
+
+        params = {
+            "mu": mu,
+            "alphas": alphas,
+            "betas": betas_fixed,
+            "T": T
         }
 
     # attach dict to result object for convenience

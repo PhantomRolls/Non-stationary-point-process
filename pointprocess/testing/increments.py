@@ -9,7 +9,6 @@ def W_naive(eta_tau, mean_intensity):
     """ Naive standardized process W̃(u). """
     return eta_tau / np.sqrt(mean_intensity)
 
-
 def W_khmaladze(eta_tau, grid_u, mean_intensity):
     """ Khmaladze-transformed process Ŵ(u). """
     return transform_T_eta_univariate(eta_tau, grid_u, mean_intensity)

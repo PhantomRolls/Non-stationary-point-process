@@ -26,7 +26,7 @@ def monte_carlo_simulation(M, process_generator,
 
         events = process_generator(process_params).events
 
-        ks_r, ad_r, cvm_r = one_run(
+        ks_r, ad_r, cvm_r, _ = one_run(
             events=events,
             T=T,
             H0=H0,

@@ -4,6 +4,17 @@ from pointprocess.estimation.compensators.exp import compensator_exp
 from pointprocess.estimation.compensators.pl import compensator_pl
 from pointprocess.estimation.compensators.multiexp import compensator_multiexp
 
+def random_time_change(events, estimated_params, T, H0):
+    events = np.asarray(events, dtype=float)
+    if H0 == "exp":
+        Lambda_events = compensator_exp(mu=estimated_params["mu"], alpha=estimated_params["alpha"], beta=estimated_params["beta"], events=events, grid_times=events)
+    elif H0 == "pl":
+        Lambda_events = compensator_pl(mu=estimated_params["mu"], alpha=estimated_params["alpha"], beta=estimated_params["beta"], events=events, grid_times=events)
+    elif H0 == "multiexp":
+        Lambda_events = compensator_multiexp(mu=estimated_params["mu"], alphas=estimated_params["alphas"], betas=estimated_params["betas"], events=events, grid_times=events)
+    transformed_times = Lambda_events[1:] - Lambda_events[:-1]
+    return transformed_times
+
 def build_eta_on_grid(events, estimated_params, T, grid_u, H0):
     grid_u = np.asarray(grid_u, dtype=float)
 
@@ -22,8 +33,12 @@ def build_eta_on_grid(events, estimated_params, T, grid_u, H0):
         alphas = estimated_params["alphas"]
         betas = estimated_params["betas"]
         Lambda_grid = compensator_multiexp(mu, alphas, betas, events, grid_u * T)
+    elif H0 == "multiexp_fixed_betas":
+        mu = estimated_params["mu"]
+        alphas = estimated_params["alphas"]
+        betas = estimated_params["betas"]
+        Lambda_grid = compensator_multiexp(mu, alphas, betas, events, grid_u * T)
 
-    # N(uT): counts of events ≤ each grid time (events are sorted)
     counts = np.searchsorted(events, grid_u * T, side="right")
 
     eta = (counts - Lambda_grid) / np.sqrt(T)

@@ -40,16 +40,35 @@ class HawkesMultiExp(PointProcess):
     def _intensity_on_grid(times, params, events):
         mu = params["mu"]
         alphas = np.array(params["alphas"])
-        betas = np.array(params["betas"])
-        times = np.asarray(times, float)
-        events = np.asarray(events, float)
-        lam = np.full_like(times, mu, dtype=float)
+        betas  = np.array(params["betas"])
+        J = len(alphas)
 
-        for k, t in enumerate(times):
-            past = events[events < t]
-            if past.size:
-                dt = t - past[:, None]     # shape (n_events, 1)
-                kernels = alphas * np.exp(-betas * dt)
-                lam[k] += kernels.sum()
+        times = np.asarray(times)
+        events = np.asarray(events)
+
+        lam = np.zeros_like(times, dtype=float)
+        lam[:] = mu
+
+        # intensité excitée pour chaque composante j
+        exc = np.zeros(J)
+
+        # pointeur pour parcourir les événements
+        i = 0
+        n_events = len(events)
+
+        for k in range(1, len(times)):
+            dt = times[k] - times[k-1]
+
+            # décroissance exponentielle entre t[k-1] et t[k]
+            exc *= np.exp(-betas * dt)
+
+            # ajouter tous les événements qui tombent dans (t[k-1], t[k]]
+            while i < n_events and events[i] <= times[k]:
+                for j in range(J):
+                    exc[j] += alphas[j]   # un "saut" α_j pour chaque événement
+                i += 1
+
+            lam[k] += exc.sum()
 
         return lam
+
