@@ -4,7 +4,7 @@ from pointprocess.estimation.likelihoods.pl import hawkes_pl_loglik
 from pointprocess.estimation.likelihoods.multiexp import hawkes_multiexp_loglik
 import numpy as np
 
-def fit_hawkes(events, T, H0, x0=None):
+def fit_hawkes(events, T, H0, x0=None, beta=None, betas=None):
     events = np.asarray(events, float)
     n = events.size
     
@@ -21,7 +21,8 @@ def fit_hawkes(events, T, H0, x0=None):
         
         def obj(p):
             return -hawkes_exp_loglik(p, events, T, dt, tail)
-
+    
+    
     # ---- POWER-LAW ----
     elif H0 == "pl":
         L = T / 10
@@ -54,7 +55,27 @@ def fit_hawkes(events, T, H0, x0=None):
             alphas = p[alpha_idx]
             betas  = p[beta_idx]
             return -hawkes_multiexp_loglik(mu, alphas, betas, events, T, dt, tail)
-
+    # ---- MultiExp-Fixed-betas ----
+    elif H0 == "multiexp-fixed-betas":
+        if betas is None:
+            raise ValueError("betas must be provided for multiexp-fixed-betas")
+        
+        betas = np.asarray(betas, float)
+        J = len(betas)
+        
+        if x0 is None:
+            mu0 = 0.5
+            alpha0 = np.full(J, 0.5/J)
+            x0 = np.concatenate(([mu0], alpha0))
+        
+        bounds = [(1e-8,None)] + [(0,None)]*J
+        
+        alpha_idx = slice(1, 1+J)
+        
+        def obj(p):
+            mu = p[0]
+            alphas = p[alpha_idx]
+            return -hawkes_multiexp_loglik(mu, alphas, betas, events, T, dt, tail)
     else:
         raise ValueError("Unknown H0")
 
@@ -63,7 +84,7 @@ def fit_hawkes(events, T, H0, x0=None):
         x0=x0,
         bounds=bounds,
         method="L-BFGS-B",
-        options={"maxiter": 200, "ftol": 1e-6}
+        options={"maxiter": 200, "ftol": 1e-7}
     )
     
     p = res.x
@@ -95,7 +116,17 @@ def fit_hawkes(events, T, H0, x0=None):
             "betas": betas,
             "J": J
         }
+    elif H0 == "multiexp-fixed-betas":
+        J = len(betas)
+        mu = p[0]
+        alphas = p[1:1+J]
 
+        params = {
+            "mu": mu,
+            "alphas": alphas,
+            "betas": betas,
+            "J": J
+        }
     # attach dict to result object for convenience
     res.params_dict = params
 

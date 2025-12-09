@@ -45,11 +45,13 @@ def build_eta_on_grid(events, estimated_params, T, grid_u, H0):
         alpha = estimated_params["alpha"]
         beta = estimated_params["beta"]
         Lambda_grid = compensator_pl(mu, alpha, beta, events, grid_times)
-    elif H0 == "multiexp":
+    elif H0 == "multiexp" or H0 == "multiexp-fixed-betas":
         mu = estimated_params["mu"]
         alphas = estimated_params["alphas"]
         betas = estimated_params["betas"]
         Lambda_grid = compensator_multiexp(mu, alphas, betas, events, grid_times)
+    else:
+        raise ValueError(f"Unknown H0 model type: {H0}")
 
     # N(uT): counts of events ≤ each grid time (events are sorted)
     counts = np.searchsorted(events, grid_times, side="right")
