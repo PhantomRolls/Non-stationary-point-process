@@ -12,6 +12,8 @@ def random_time_change(events, estimated_params, T, H0):
         Lambda_events = compensator_pl(mu=estimated_params["mu"], alpha=estimated_params["alpha"], beta=estimated_params["beta"], events=events, grid_times=events)
     elif H0 == "multiexp":
         Lambda_events = compensator_multiexp(mu=estimated_params["mu"], alphas=estimated_params["alphas"], betas=estimated_params["betas"], events=events, grid_times=events)
+    elif H0 == "multiexp_fixed_betas":
+        Lambda_events = compensator_multiexp(mu=estimated_params["mu"], alphas=estimated_params["alphas"], betas=estimated_params["betas"], events=events, grid_times=events)
     transformed_times = Lambda_events[1:] - Lambda_events[:-1]
     return transformed_times
 

@@ -1,17 +1,20 @@
 # pointprocess/testing/one_run.py
 import numpy as np
+import matplotlib.pyplot as plt
 from pointprocess.estimation.mle import fit_hawkes
 from pointprocess.testing.increments import build_increments
 from pointprocess.testing.gof_tests import ks_test, cvm_test, ad_test
 from pointprocess.testing.transformations import random_time_change
 
+
 def one_run(events, T, H0, method,
-            alpha_level, tau=1.0, n_for_test=None, grid_size=None):
+            alpha_level, tau=1.0, n_for_test=None, grid_size=None, plot=False, J=None):
     
     events = np.asarray(events, float)
 
     # 1. MLE
-    estimated_params = fit_hawkes(events, T, H0=H0).params_dict
+    estimated_params = fit_hawkes(events, T, H0=H0, plot=plot, J=J).params_dict
+    
     if n_for_test is None:
         n_for_test = int(np.ceil(np.sqrt(T) / 4.0))
     if grid_size is None:
@@ -36,4 +39,4 @@ def one_run(events, T, H0, method,
         cvm_reject = cvm_test(x, alpha_level, "normal")
         ad_reject  = ad_test(x, alpha_level, "normal")
 
-    return ks_reject, ad_reject, cvm_reject, estimated_params
+    return ks_reject, ad_reject, cvm_reject, estimated_params, x

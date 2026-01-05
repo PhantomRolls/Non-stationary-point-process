@@ -3,8 +3,98 @@ from pointprocess.estimation.likelihoods.exp import hawkes_exp_loglik
 from pointprocess.estimation.likelihoods.pl import hawkes_pl_loglik
 from pointprocess.estimation.likelihoods.multiexp import hawkes_multiexp_loglik
 import numpy as np
+from sklearn.mixture import GaussianMixture
 
-def fit_hawkes(events, T, H0, x0=None):
+
+def estimate_betas_gmm(
+    event_times,
+    n_components=None,        # ← auto si None
+    J_max=6,
+    min_intervals=200,
+    random_state=42,
+    sort_desc=True,
+    criterion="bic",          # "aic" ou "bic"
+):
+
+    t = np.asarray(event_times, dtype=float)
+    dt = np.diff(t)
+    dt = dt[dt > 0]
+
+    if len(dt) < max(min_intervals, J_max * 20):
+        raise ValueError("Pas assez d'inter-temps positifs pour un GMM robuste.")
+
+    log_dt = np.log(dt).reshape(-1, 1)
+
+    # 🔹 Sélection du nombre de composantes
+    if n_components is None:
+        scores = []
+        models = []
+
+        for k in range(1, J_max + 1):
+            gmm = GaussianMixture(
+                n_components=k,
+                random_state=random_state,
+                covariance_type="full",
+            )
+            gmm.fit(log_dt)
+
+            score = gmm.bic(log_dt) if criterion == "bic" else gmm.aic(log_dt)
+            scores.append(score)
+            models.append(gmm)
+
+        def choose_k_elbow(bics, min_gain=50):
+            for i in range(J_max):
+                gain = bics[i] - bics[i+1]
+                if gain < min_gain:
+                    return i
+            return J_max
+
+        best_idx = choose_k_elbow(scores)
+        gmm = models[best_idx]
+        n_components = gmm.n_components
+    else:
+        gmm = GaussianMixture(
+            n_components=n_components,
+            random_state=random_state,
+            covariance_type="full",
+        )
+        gmm.fit(log_dt)
+        scores = None
+        
+
+    # 🔹 Extraction des betas
+    log_means = gmm.means_.reshape(-1)
+    taus = np.exp(log_means)
+    betas = 1.0 / taus
+
+    weights = gmm.weights_.reshape(-1)
+    covs = gmm.covariances_.reshape(n_components, -1)
+
+    if sort_desc:
+        order = np.argsort(betas)[::-1]
+        betas = betas[order]
+        taus = taus[order]
+        weights = weights[order]
+        log_means = log_means[order]
+        covs = covs[order]
+
+    info = {
+        "n_components": n_components,
+        "taus": taus,
+        "weights": weights,
+        "log_means": log_means,
+        "covariances": covs,
+        "n_intervals": len(dt),
+        "criterion": criterion,
+        "gmm": gmm,
+        "scores": scores,
+        "J_max": J_max
+    }
+    
+        
+    return betas, info
+
+def fit_hawkes(events, T, H0, x0=None, plot=False, J=None):
     events = np.asarray(events, float)
     n = events.size
     
@@ -36,8 +126,7 @@ def fit_hawkes(events, T, H0, x0=None):
 
     # ---- MULTI-EXP ----
     elif H0 == "multiexp":
-        J=3
-        
+        J = 3
         if x0 is None:
             mu0 = 0.5
             alpha0 = np.full(J, 0.5/J)
@@ -56,16 +145,34 @@ def fit_hawkes(events, T, H0, x0=None):
             return -hawkes_multiexp_loglik(mu, alphas, betas, events, T, dt, tail)
     
     elif H0 == "multiexp_fixed_betas":
-        J=3
+        betas_fixed, info = estimate_betas_gmm(events, n_components=3)
+        # betas_fixed = np.array([217510, 765, 0.242])
+        
+        if plot:
+            from pointprocess.utils.io import plot_interarrival_distribution, plot_bic, plot_gmm_interarrival_counts, annotate_gmm_weights
+            import matplotlib.pyplot as plt
+            fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+            plot_bic(info["scores"], info["J_max"], info["criterion"], ax=axes[0])
+            plot_interarrival_distribution(events, ax=axes[1])
+            # Récupérer les bins réellement utilisés
+            inter = np.diff(events)
+            inter = inter[inter > 0]
+            bins = np.logspace(np.log10(inter.min()), np.log10(inter.max()), 80)
+            annotate_gmm_weights(events, info["gmm"], bins=bins, ax=axes[1])
+            # GMM en counts
+            plot_gmm_interarrival_counts(events, gmm=info["gmm"], bins=bins, ax=axes[1], plot_components=True, plot_total=False)
+            plt.tight_layout()
+            plt.show()
+
         if x0 is None:
             mu0 = 0.5
-            alpha0 = np.full(J, 0.5/J)
+            alpha0 = np.full(3, 0.5/3)
             x0 = np.concatenate(([mu0], alpha0))
         
-        bounds = [(1e-8,None)] + [(0,None)]*J
+        bounds = [(1e-8,None)] + [(0,None)]*3
         
-        alpha_idx = slice(1, 1+J)
-        betas_fixed = np.array([1e5, 1e3, 0.1], dtype=np.float64)
+        alpha_idx = slice(1, 1+3)
+        betas_fixed = betas_fixed
         
         def obj(p):
             mu = p[0]
@@ -110,7 +217,8 @@ def fit_hawkes(events, T, H0, x0=None):
             "mu": mu,
             "alphas": alphas,
             "betas": betas,
-            "T": T
+            "T": T,
+            "J": J
         }
         
     elif H0 == "multiexp_fixed_betas":
@@ -122,7 +230,8 @@ def fit_hawkes(events, T, H0, x0=None):
             "mu": mu,
             "alphas": alphas,
             "betas": betas_fixed,
-            "T": T
+            "T": T,
+            "J": J
         }
 
     # attach dict to result object for convenience

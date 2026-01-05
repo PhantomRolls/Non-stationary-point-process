@@ -1,37 +1,65 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from pointprocess.estimation.mle import fit_hawkes
 from pointprocess.simulation.hawkes_exp import HawkesExp
 from pointprocess.simulation.hawkes_pl import HawkesPL
 from pointprocess.simulation.hawkes_multiexp import HawkesMultiExp
+from pointprocess.montecarlo.monte_carlo_real import monte_carlo_real
 from pointprocess.testing.one_run import one_run
-from pointprocess.utils.io import load_real_data, plot_interarrival_distribution, plot_two_counting_processes
+from pointprocess.utils.io import load_real_data, qq_plot, plot_two_counting_processes
+from pointprocess.utils.io import load_config
+
+dates = ["2017-01-20", "2017-01-23", "2017-01-24", "2017-01-25", "2017-01-26", "2017-01-27", "2017-01-30", "2017-01-31", "2017-02-01"]  
+intervals_1h = [("09:00:00", "10:00:00"), ("10:00:00", "11:00:00"), ("11:00:00", "12:00:00"), ("12:00:00", "13:00:00"), ("13:00:00", "14:00:00"), ("14:00:00", "15:00:00"), ("15:00:00", "16:00:00")]
+intervals_30min = [
+    ("09:00:00", "09:30:00"),
+    ("09:30:00", "10:00:00"),
+    ("10:00:00", "10:30:00"),
+    ("10:30:00", "11:00:00"),
+    ("11:00:00", "11:30:00"),
+    ("11:30:00", "12:00:00"),
+    ("12:00:00", "12:30:00"),
+    ("12:30:00", "13:00:00"),
+    ("13:00:00", "13:30:00"),
+    ("13:30:00", "14:00:00"),
+    ("14:00:00", "14:30:00"),
+    ("14:30:00", "15:00:00"),
+    ("15:00:00", "15:30:00"),
+    ("15:30:00", "16:00:00"),
+    ("16:00:00", "16:30:00"),
+    ("16:30:00", "17:00:00"),
+    ("17:00:00", "17:30:00"),
+]
+
+# monte_carlo_real(dates, intervals_30min, H0="multiexp_fixed_betas", method="khmaladze", J=3)
+    
+ 
 
 
-start = "2017-01-17 11:00:00"
-end = "2017-01-17 12:00:00"
-path = "data/bdfh_snapshots_FR0000130809_20170117_5_True.csv"
+# date = "2017-01-23"
+# start = "11:00:00"
+# end = "12:00:00"
 
-events_real, T = load_real_data(start=start, end=end, path=path)
-print(len(events_real), "événements réels entre", start, "et", end, "sur une période de", T, "secondes.")
-plot_interarrival_distribution(events_real, bins=100)
+# start_ = date + " " + start
+# end_ = date + " " + end
+# events_real, T = load_real_data(start=start_, end=end_, path=f"data/{date}.csv")
 
-ks_reject, ad_reject, cvm_reject, estimated_params = one_run(
-    events=events_real,
-    T=T,
-    H0="multiexp_fixed_betas",
-    method="khmaladze",
-    alpha_level=0.05)
-
-print("estimated_params:", estimated_params)
+# config = load_config("config.yaml")
+# process_params = config[HawkesMultiExp.__name__]
+# T = process_params["T"]
+# events_sim = HawkesMultiExp(process_params).events
+# x_exp = np.random.exponential(scale=1.0, size=len(events_sim))
 
 
-print("Test de Kolmogorov-Smirnov rejeté :", ks_reject)
-print("Test d'Anderson-Darling rejeté :", ad_reject)
-print("Test de Cramér-von Mises rejeté :", cvm_reject)
+# ks_reject, ad_reject, cvm_reject, estimated_params, x = one_run(
+#                 events=events_real,
+#                 T=T,
+#                 H0="multiexp_fixed_betas",
+#                 method="naive_rtc",
+#                 alpha_level=0.05, plot=False, J=3)
 
-hawkes = HawkesMultiExp(params=estimated_params)
-events_sim = hawkes.events
-hawkes.plot()
-plot_two_counting_processes(events_real, events_sim, T)
+# # hawkes = HawkesMultiExp(estimated_params)
+# # events_sim = hawkes.events
+# # plot_two_counting_processes(events_sim, events_real)
+
+# qq_plot(x)
